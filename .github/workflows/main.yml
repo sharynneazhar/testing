@@ -1,0 +1,39 @@
+name: Enforce PR Title Rules Based on v2.0 or 2.0 Tag
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  check-pr-title:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure we fetch all tags
+
+      - name: Check if v2.0 or 2.0 tag exists
+        id: check_tag
+        run: |
+          if git tag | grep -E '^v?2\.0$' >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Check PR Title
+        id: title_check
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [[ "$PR_TITLE" =~ ^feat\( ]]; then
+            if [[ "$TAG_EXISTS" == "true" ]]; then
+              echo "ERROR: PR title starts with 'feat(' but repo has a v2.0 or 2.0 tag!"
+              exit 1
+            fi
+          fi
+
+      - name: Success Message
+        if: success()
+        run: echo "PR title check passed!"
