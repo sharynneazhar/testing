@@ -57,7 +57,7 @@ jobs:
           echo "SHOULD_WARN_BRANCH=$SHOULD_WARN_BRANCH" >> $GITHUB_ENV
 
       - name: Post Warning Comment on PR
-        if: env.SHOULD_WARN == 'true'
+        if: env.SHOULD_WARN_TITLE == 'true' || env.SHOULD_WARN_BRANCH == 'true'
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
