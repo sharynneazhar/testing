@@ -61,15 +61,15 @@ jobs:
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
-          COMMENT_BODY="⚠️ **Warning:** Your PR title does not follow the required format.\n\n"
+          COMMENT_BODY="⚠️ **Warning:** Your PR does not follow the Branching Model requirements for v2.0 upgrade."
 
           if [[ "$SHOULD_WARN_TITLE" == "true" ]]; then
-            COMMENT_BODY+="* PR title starts with \`feat(\` but the repo has a **v2.0** tag. Follow semantic versioning.\n"
+            COMMENT_BODY+=" PR title starts with \`feat(\` but the repo has a **v2.0** tag. Follow semantic versioning."
           fi
 
           if [[ "$SHOULD_WARN_BRANCH" == "true" ]]; then
-            COMMENT_BODY+="* PR targets \`main\`, but title should start with \`patch-1.x.x\`.\n"
-            COMMENT_BODY+="\n**Available Patch Branches:**\n\`${{ env.PATCH_BRANCHES }}\`"
+            COMMENT_BODY+="* PR targets \`main\`, but title should start with \`patch-1.x.x\`."
+            COMMENT_BODY+="**Available Patch Branches:**\n\`${{ env.PATCH_BRANCHES }}\`"
           fi
 
           gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
