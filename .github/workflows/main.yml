@@ -16,6 +16,14 @@ jobs:
         with:
           fetch-depth: 0  # Ensure we fetch all tags
 
+      - name: Find Branches Starting with 'patch-1.'
+        id: find_patch_branches
+        run: |
+          git fetch --all
+          PATCH_BRANCHES=$(git branch -r | grep 'patch-1\.' || echo "None")
+          echo "Found branches: $PATCH_BRANCHES"
+          echo "PATCH_BRANCHES=$PATCH_BRANCHES" >> $GITHUB_ENV
+
       - name: Check if v2.0 or 2.0 tag exists
         id: check_tag
         run: |
@@ -31,6 +39,7 @@ jobs:
           PR_TITLE="${{ github.event.pull_request.title }}"
           BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
           SHOULD_WARN=false
+          SHOULD_WARN=false
 
           # Rule 1: If repo has v2.0 tag, warn if PR title starts with 'feat('
           if [[ "$TAG_EXISTS" == "true" && "$PR_TITLE" =~ ^feat\( ]]; then
@@ -38,9 +47,9 @@ jobs:
             SHOULD_WARN=true
           fi
 
-          # Rule 2: If base branch is 'main', PR title should start with 'patch-1.x.x'
-          if [[ "$BASE_BRANCH" == "main" && ! "$PR_TITLE" =~ ^patch-1\.[0-9]+\.[0-9]+ ]]; then
-            echo "WARNING: PR targets 'main' but does not start with 'patch-1.x.x'."
+          # Rule 2: If repo has v2.0 tag, warn if base branch is 'main'
+          if [[ "$TAG_EXISTS" == "true" && "$BASE_BRANCH" == "main" ]]; then
+            echo "WARNING: PR targets 'main' but repo has a branch 'patch-1.x.x'."
             SHOULD_WARN=true
           fi
 
@@ -54,11 +63,12 @@ jobs:
           COMMENT_BODY="⚠️ **Warning:** Your PR title does not follow the required format.\n\n"
 
           if [[ "$TAG_EXISTS" == "true" && "$PR_TITLE" =~ ^feat\( ]]; then
-            COMMENT_BODY+="🚫 PR title starts with \`feat(\` but the repo has a **v2.0** tag. Follow semantic versioning.\n"
+            COMMENT_BODY+="* PR title starts with \`feat(\` but the repo has a **v2.0** tag. Follow semantic versioning.\n"
           fi
 
-          if [[ "$BASE_BRANCH" == "main" && ! "$PR_TITLE" =~ ^patch-1\.[0-9]+\.[0-9]+ ]]; then
-            COMMENT_BODY+="🚫 PR targets \`main\`, but title should start with \`patch-1.x.x\`.\n"
+          if [[ "$TAG_EXISTS" == "true" && "$BASE_BRANCH" == "main" ]]; then
+            COMMENT_BODY+="* PR targets \`main\`, but title should start with \`patch-1.x.x\`.\n"
+            COMMENT_BODY+="\n**Available Patch Branches:**\n\`${{ env.PATCH_BRANCHES }}\`"
           fi
 
           gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
