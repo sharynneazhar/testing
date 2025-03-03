@@ -1,4 +1,4 @@
-name: Enforce PR Title Rules Based on v2.0 or 2.0 Tag
+name: PR Title Warning for feat( when v2.0 Exists
 
 on:
   pull_request:
@@ -7,6 +7,8 @@ on:
 jobs:
   check-pr-title:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write  # Needed to post a comment on PR
 
     steps:
       - name: Checkout repository
@@ -27,13 +29,19 @@ jobs:
         id: title_check
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
-          if [[ "$PR_TITLE" =~ ^feat\( ]]; then
-            if [[ "$TAG_EXISTS" == "true" ]]; then
-              echo "ERROR: PR title starts with 'feat(' but repo has a v2.0 or 2.0 tag!"
-              exit 1
-            fi
+          if [[ "$PR_TITLE" =~ ^feat\( ]] && [[ "$TAG_EXISTS" == "true" ]]; then
+            echo "WARNING: PR title starts with 'feat(' but repo has a v2.0 or 2.0 tag!"
+            echo "SHOULD_WARN=true" >> $GITHUB_ENV
+          else
+            echo "SHOULD_WARN=false" >> $GITHUB_ENV
           fi
 
-      - name: Success Message
-        if: success()
-        run: echo "PR title check passed!"
+      - name: Post Warning Comment on PR
+        if: env.SHOULD_WARN == 'true'
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          COMMENT_BODY="⚠️ **Warning:** Your PR title starts with \`feat(\`, but the repository has a **v2.0** tag. Please follow semantic versioning rules."
+          gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
