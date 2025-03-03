@@ -38,22 +38,23 @@ jobs:
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
           BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
-          SHOULD_WARN=false
-          SHOULD_WARN=false
+          SHOULD_WARN_TITLE=false
+          SHOULD_WARN_BRANCH=false
 
           # Rule 1: If repo has v2.0 tag, warn if PR title starts with 'feat('
           if [[ "$TAG_EXISTS" == "true" && "$PR_TITLE" =~ ^feat\( ]]; then
             echo "WARNING: PR title starts with 'feat(' but repo has a v2.0 or 2.0 tag!"
-            SHOULD_WARN=true
+            SHOULD_WARN_TITLE=true
           fi
 
           # Rule 2: If repo has v2.0 tag, warn if base branch is 'main'
           if [[ "$TAG_EXISTS" == "true" && "$BASE_BRANCH" == "main" ]]; then
             echo "WARNING: PR targets 'main' but repo has a branch 'patch-1.x.x'."
-            SHOULD_WARN=true
+            SHOULD_WARN_BRANCH=true
           fi
 
-          echo "SHOULD_WARN=$SHOULD_WARN" >> $GITHUB_ENV
+          echo "SHOULD_WARN_TITLE=$SHOULD_WARN_TITLE" >> $GITHUB_ENV
+          echo "SHOULD_WARN_BRANCH=$SHOULD_WARN_BRANCH" >> $GITHUB_ENV
 
       - name: Post Warning Comment on PR
         if: env.SHOULD_WARN == 'true'
@@ -62,11 +63,11 @@ jobs:
           REPO="${{ github.repository }}"
           COMMENT_BODY="⚠️ **Warning:** Your PR title does not follow the required format.\n\n"
 
-          if [[ "$TAG_EXISTS" == "true" && "$PR_TITLE" =~ ^feat\( ]]; then
+          if [[ "$SHOULD_WARN_TITLE" == "true" ]]; then
             COMMENT_BODY+="* PR title starts with \`feat(\` but the repo has a **v2.0** tag. Follow semantic versioning.\n"
           fi
 
-          if [[ "$TAG_EXISTS" == "true" && "$BASE_BRANCH" == "main" ]]; then
+          if [[ "$SHOULD_WARN_BRANCH" == "true" ]]; then
             COMMENT_BODY+="* PR targets \`main\`, but title should start with \`patch-1.x.x\`.\n"
             COMMENT_BODY+="\n**Available Patch Branches:**\n\`${{ env.PATCH_BRANCHES }}\`"
           fi
